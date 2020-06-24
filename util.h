@@ -9,6 +9,7 @@ extern "C"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
+#include <poll.h>
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
@@ -35,6 +36,7 @@ extern "C"
 #include <list>
 #include <map>
 #include <set>
+#include <unordered_map>
 
 uint64_t gettime();
 int log(lua_State *L);

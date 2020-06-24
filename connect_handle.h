@@ -111,7 +111,7 @@ public:
         }
         else
         {
-            cout << "tcp connect success \n";
+            //cout << "tcp connect success \n";
             connected = true;
         }
     }
@@ -160,11 +160,11 @@ public:
         if (ctx)
             SSL_CTX_free(ctx);
     }
-    virtual int on_read(const char buf[], int len)
+    virtual int on_read(const char *buf, int len)
     {
         return SSL_read(ssl, (void *)buf, len);
     }
-    virtual int on_write(const char buf[], int len)
+    virtual int on_write(const char *buf, int len)
     {
         return SSL_write(ssl, buf, len);
     }

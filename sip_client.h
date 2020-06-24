@@ -9,11 +9,11 @@ class net_poll
 public:
     net_poll();
     bool loop();
-    bool add_client(sip_client *c);
-    bool del_client(sip_client *c);
+    bool epoll_add(sip_client *c);
+    bool epoll_del(sip_client *c);
 public:
     int epfd;
-    epoll_event *revents;
+    std::unordered_map<int, sip_client*> cli_map;
 };
 
 enum Protocol
@@ -27,14 +27,17 @@ public:
     sip_client(Protocol type, std::string &ipaddr, int port, std::string &path, net_poll *np);
     ~sip_client();
     bool on_sip_msg(const char *sip_msg);
-    bool resume_lua_state(lua_State *L);
     int on_read();
     void send_msg(std::string &msg);
     bool run_script();
+    bool operator<(const sip_client &c);
+    int getfd();
 public:
-    connect_base *connect;
+    connect_base *m_connect;
     string buf;
     lua_State *L;
     net_poll *m_netpoll;
+    int64_t end_time;
+    void *user_data;
 };
 #endif

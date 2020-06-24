@@ -1,7 +1,7 @@
 #include "util.h"
 #include "connect_handle.h"
 #include "sip_client.h"
-
+#include "clients_manager.h"
 
 void init_envs()
 {
@@ -18,14 +18,17 @@ int main(int argc, char **argv)
 
     std::string server_addr = "10.100.126.241";
     std::string script_path = "./sip.lua";
-    sip_client *cli = new sip_client(T_TCP, server_addr, 5090, script_path, net_poll_);
-    if(!cli->run_script())
-        net_poll_->del_client(cli);
-    else
-        net_poll_->add_client(cli);
 
+    for(int i=0; i< 100; ++i)
+    {
+        sip_client *cli = new sip_client(T_TCP, server_addr, 5090, script_path, net_poll_);
+        if(cli->run_script())
+        {
+            net_poll_->epoll_add(cli);
+        }
+        usleep(100);
+    }
     net_poll_->loop();
-
-    pause();
+    //pause();
     return 0;
 }
