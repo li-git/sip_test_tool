@@ -8,6 +8,10 @@ uint64_t gettime()
 int log(lua_State *L)
 {
     const char *log = lua_tostring(L, -1);
-    std::cout<<log<<std::endl;
+    time_t now_time = time(NULL);
+    char buf[128] = {0};
+    tm *local = localtime(&now_time);
+    strftime(buf, 128, "%Y-%m-%d %H:%M:%S", local);
+    std::cout << buf << " ====> " << log  << std::endl;
     return 0;
 }

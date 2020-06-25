@@ -59,9 +59,10 @@ void clients_manager::do_task()
     for(auto it = cli_multiset.rbegin(); it != cli_multiset.rend();++it )
     {
         sip_client *cli = (sip_client *)(*it);
-        if( cli->end_time < time(NULL) )
+        if(cli->end_time && cli->end_time < time(NULL) )
         {
             cli->run_script();
+            cli->end_time = 0;
         }
         else
         {
@@ -70,10 +71,10 @@ void clients_manager::do_task()
     }
     spinlock_unlock(&m_lock);
 }
-void seconds_sleep(unsigned seconds){
+void ms_sleep(unsigned ms){
     struct timeval tv;
-    tv.tv_sec=seconds;
-    tv.tv_usec=0;
+    tv.tv_sec=0;
+    tv.tv_usec=ms * 1000;
     int err;
     do{
        err=select(0,NULL,NULL,NULL,&tv);
@@ -96,6 +97,6 @@ void clients_manager::loop(int write_fd)
             }
         }
         spinlock_unlock(&m_lock);
-        seconds_sleep(1);
+        ms_sleep(100);
     }
 }

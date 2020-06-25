@@ -29,7 +29,7 @@ public:
     bool on_sip_msg(const char *sip_msg);
     int on_read();
     void send_msg(std::string &msg);
-    bool run_script();
+    bool run_script(int argc = 0);
     bool operator<(const sip_client &c);
     int getfd();
 public:

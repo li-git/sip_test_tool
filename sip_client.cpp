@@ -3,12 +3,27 @@
 
 int sendmsg(lua_State *L)
 {
-    std::string msg_ = lua_tostring(L, -1);
+    int argc = lua_gettop(L);
+    std::string msg_ = "";
+    bool is_noblock = true;
+    if(argc == 1)
+    {
+        msg_ = lua_tostring(L, -1);
+    }
+    else if(argc == 2)
+    {
+        msg_ = lua_tostring(L, -2);
+        is_noblock = lua_toboolean(L, -1);
+    }
     lua_getfield(L, LUA_REGISTRYINDEX, "ExtensionInfo");
     sip_client *cli = (sip_client *)lua_touserdata(L, -1);
     if (cli)
     {
         cli->send_msg(msg_);
+        if(is_noblock)
+        {
+            lua_yield(L, 0);
+        }
     }
     return 0;
 }
@@ -156,7 +171,6 @@ sip_client::sip_client(Protocol type, std::string &ipaddr, int port, std::string
     {
         m_connect = new tls_connnect(ipaddr, port);
     }
-    //printf("=======new client==client %p=============connect %p \n", this, m_connect);
     lua_init(this);
     luaL_loadfile(L, path.c_str());
 }
@@ -169,11 +183,11 @@ sip_client::~sip_client()
         m_connect = NULL;
     }
 }
-bool sip_client::run_script()
+bool sip_client::run_script(int argc)
 {
     if (time(NULL) >= end_time)
     {
-        int status = lua_resume(L, NULL, 0);
+        int status = lua_resume(L, NULL, argc);
         if (status == LUA_ERRRUN)
         {
             cout << " lua run script error , drop client " << status << endl;
@@ -193,8 +207,7 @@ int sip_client::getfd()
 bool sip_client::on_sip_msg(const char *sip_msg)
 {
     lua_pushstring(L, sip_msg);
-    lua_setglobal(L, "SIP_MSG");
-    return run_script();
+    return run_script(1);
 }
 static char tmp_buf[1024] = {0};
 int sip_client::on_read()
