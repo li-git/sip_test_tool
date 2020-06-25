@@ -20,6 +20,7 @@ extern "C"
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
+#include <openssl/md5.h>
 #include <unistd.h>
 #include <stdint.h>
 
@@ -40,3 +41,5 @@ extern "C"
 
 uint64_t gettime();
 int log(lua_State *L);
+std::string MD5(const std::string& src );
+void ms_sleep(unsigned ms);

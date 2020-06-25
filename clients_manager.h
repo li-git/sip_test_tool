@@ -11,9 +11,21 @@ public:
     bool del_client(sip_client *cli);
     bool add_client(sip_client *cli);
     bool is_exsist(sip_client *cli);
-
-    void do_task();
     void loop(int write_fd);
+public:
+    std::multiset<sip_client *> cli_multiset;
+    spinlock m_lock;
+};
+
+class notify_timer
+{
+public:
+    notify_timer();
+    ~notify_timer(){}
+    static notify_timer *instance();
+    bool addTask(sip_client *cli);
+    bool delTask(sip_client *cli);
+    void loop(int notify_fd);
 public:
     std::multiset<sip_client *> cli_multiset;
     spinlock m_lock;

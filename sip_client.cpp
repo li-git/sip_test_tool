@@ -35,12 +35,18 @@ int sleep_(lua_State *L)
     if (cli)
     {
         cli->end_time = time(NULL) + sleep_delay;
+        notify_timer::instance()->addTask(cli);
         //cout<<" add end time = " << cli->end_time <<endl;
         lua_yield(L, 0);
     }
     return 0;
 }
-
+int md5_(lua_State *L)
+{
+    string data_ = lua_tostring(L, -1);
+    lua_pushstring(L, MD5(data_).c_str());
+    return 1;
+}
 net_poll::net_poll()
     : epfd(0)
 {
@@ -60,7 +66,7 @@ bool net_poll::loop()
     event.data.fd = read_fd;
     epoll_ctl(epfd, EPOLL_CTL_ADD, read_fd, &event);
 
-    auto notify_thread = [&] { clients_manager::instance()->loop(wirte_fd); };
+    auto notify_thread = [&] { notify_timer::instance()->loop(wirte_fd); };
     std::thread notify_th(notify_thread);
     notify_th.detach();
 
@@ -75,11 +81,15 @@ bool net_poll::loop()
                 if (revents[i].data.fd == read_fd)
                 {
                     // notify event
-                    char buf[1];
-                    int ret = read(read_fd, buf, 1);
-                    if (ret)
+                    int fd = 0;
+                    int ret = read(read_fd, (void*)&fd, sizeof(fd));
+                    if (ret )
                     {
-                        clients_manager::instance()->do_task();
+                        sip_client *cli = cli_map[fd];
+                        if(cli)
+                        {
+                            cli->run_script();
+                        }
                     }
                 }
                 else
@@ -140,6 +150,7 @@ static const luaL_Reg siplib[] = {
     {"log", log},
     {"sendmsg", sendmsg},
     {"sleep", sleep_},
+    {"md5", md5_},
     {NULL, NULL}};
 int luaopen_lib(lua_State *L)
 {
@@ -243,7 +254,10 @@ int sip_client::on_read()
 void sip_client::send_msg(std::string &msg)
 {
     if (m_connect)
+    {
+        //cout << "send msg :" << msg;
         m_connect->on_write(msg.c_str(), msg.length());
+    }
 }
 bool sip_client::operator<(const sip_client &c)
 {
