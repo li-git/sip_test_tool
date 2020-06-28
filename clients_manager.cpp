@@ -114,7 +114,7 @@ void notify_timer::loop(int notify_fd)
             for(auto it = cli_multiset.rbegin(); it != cli_multiset.rend(); )
             {
                 sip_client *cli = (sip_client *)(*it);
-                if(cli->end_time && cli->end_time < time(NULL) )
+                if(cli->end_time && cli->end_time <= time(NULL) )
                 {
                     int buf = cli->getfd();
                     cli->end_time = 0;
