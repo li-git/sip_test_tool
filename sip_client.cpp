@@ -187,6 +187,7 @@ bool sip_client::run_script(int argc)
         if (status == LUA_ERRRUN)
         {
             cout << " lua run script error , drop client " << status << endl;
+            cout << "Trace : " << lua_tostring(L, -1) << endl;
             m_netpoll->epoll_del(this, getfd());
             return false;
         }
