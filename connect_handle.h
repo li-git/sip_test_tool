@@ -160,11 +160,11 @@ public:
         if (ctx)
             SSL_CTX_free(ctx);
     }
-    virtual int on_read(const char *buf, int len)
+    virtual int on_read(const char *buf, uint32_t len)
     {
         return SSL_read(ssl, (void *)buf, len);
     }
-    virtual int on_write(const char *buf, int len)
+    virtual int on_write(const char *buf, uint32_t len)
     {
         return SSL_write(ssl, buf, len);
     }

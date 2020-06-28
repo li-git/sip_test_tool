@@ -19,8 +19,8 @@ Expires: 86400]].."\r\n\r\n"
     local password = "1234"
     local method = "REGISTER"
     local username = "10000"
-    local nonce = string.match( resp, 'nonce="(.*)",')
-    local realm = string.match( resp, 'realm="(.*)", non')
+    local nonce = tostring(string.match( resp, 'nonce="(.*)",'))
+    local realm = tostring(string.match( resp, 'realm="(.*)", non'))
 
     local HASH1=sip.md5(username..":"..realm..":"..password) 
     local HASH2=sip.md5(method..":"..uri) 

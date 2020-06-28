@@ -10,10 +10,10 @@ public:
     net_poll();
     bool loop();
     bool epoll_add(sip_client *c);
-    bool epoll_del(sip_client *c);
+    bool epoll_del(sip_client *c, int fd);
 public:
     int epfd;
-    std::unordered_map<int, sip_client*> cli_map;
+    //std::unordered_map<int, sip_client*> cli_map;
 };
 
 enum Protocol

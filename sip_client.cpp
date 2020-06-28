@@ -85,7 +85,7 @@ bool net_poll::loop()
                     int ret = read(read_fd, (void*)&fd, sizeof(fd));
                     if (ret )
                     {
-                        sip_client *cli = cli_map[fd];
+                        sip_client *cli = clients_manager::instance()->getclient(fd);
                         if(cli)
                         {
                             cli->run_script();
@@ -95,14 +95,12 @@ bool net_poll::loop()
                 else
                 {
                     int fd = revents[i].data.fd;
-                    auto pos = cli_map.find(fd);
-                    if (pos != cli_map.end())
+                    sip_client *cli = clients_manager::instance()->getclient(fd);
+                    if (cli)
                     {
-                        sip_client *cli = pos->second;
-                        //printf("=========client %p=============connect %p \n",cli,  cli->m_connect);
                         if (cli->on_read() == 0)
                         {
-                            epoll_del(cli);
+                            epoll_del(cli, fd);
                         }
                     }
                 }
@@ -111,11 +109,7 @@ bool net_poll::loop()
             {
                 cout << "read error notify \n";
                 int fd = revents[i].data.fd;
-                auto pos = cli_map.find(fd);
-                if (pos != cli_map.end())
-                {
-                    epoll_del(pos->second);
-                }
+                epoll_del(NULL, fd);
             }
         }
     }
@@ -123,29 +117,20 @@ bool net_poll::loop()
 }
 bool net_poll::epoll_add(sip_client *c)
 {
-    //cout<<" add epoll add fd = "<< c->getfd() << endl;
     epoll_event event;
     event.events = EPOLLIN | EPOLLERR;
     event.data.fd = c->getfd();
     epoll_ctl(epfd, EPOLL_CTL_ADD, c->getfd(), &event);
 
-    cli_map[c->getfd()] = c;
     clients_manager::instance()->add_client(c);
-
     return true;
 }
-bool net_poll::epoll_del(sip_client *c)
+bool net_poll::epoll_del(sip_client *c, int fd)
 {
-    epoll_ctl(epfd, EPOLL_CTL_DEL, c->getfd(), NULL);
-    auto pos = cli_map.find(c->getfd());
-    if (pos != cli_map.end())
-    {
-        cli_map.erase(pos);
-    }
-    clients_manager::instance()->del_client(c);
+    epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+    clients_manager::instance()->del_client(fd);
     return true;
 }
-
 static const luaL_Reg siplib[] = {
     {"log", log},
     {"sendmsg", sendmsg},
@@ -202,7 +187,7 @@ bool sip_client::run_script(int argc)
         if (status == LUA_ERRRUN)
         {
             cout << " lua run script error , drop client " << status << endl;
-            m_netpoll->epoll_del(this);
+            m_netpoll->epoll_del(this, getfd());
             return false;
         }
     }
