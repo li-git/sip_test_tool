@@ -1,6 +1,26 @@
 #include "sip_client.h"
 #include "clients_manager.h"
+#include "mysql.h"
 
+std::atomic<mysqlPool*> g_mysqlpool(NULL);
+
+int mysql(lua_State *L)
+{
+    int argc = lua_gettop(L);
+    if( argc < 6)
+    {
+        lua_pushnil(L);
+    }
+    string username = lua_tostring(L, -6);
+    string passwd = lua_tostring(L, -5);
+    string ip = lua_tostring(L, -4);
+    int port = lua_tonumber(L, -3);
+    string dbname = lua_tostring(L, -2);
+    string sql = lua_tostring(L, -1);
+    MysqlHandle handle(username.c_str(), passwd.c_str(), ip.c_str(), dbname.c_str(), port);
+    handle.sql(sql.c_str(), L);
+    return 1;
+}
 int sendmsg(lua_State *L)
 {
     int argc = lua_gettop(L);
@@ -132,7 +152,6 @@ bool net_poll::epoll_del(sip_client *c, int fd)
     return true;
 }
 static const luaL_Reg siplib[] = {
-    {"log", log},
     {"sendmsg", sendmsg},
     {"sleep", sleep_},
     {"md5", md5_},
@@ -149,6 +168,9 @@ int lua_init(sip_client *cli)
     lua_pushlightuserdata(cli->L, cli);
     lua_setfield(cli->L, LUA_REGISTRYINDEX, "ExtensionInfo");
     luaL_requiref(cli->L, "sip", luaopen_lib, 1);
+
+    lua_register(cli->L, "log", log);
+    lua_register(cli->L, "mysql", mysql);
 }
 
 sip_client::sip_client(Protocol type, std::string &ipaddr, int port, std::string &path, net_poll *np)
@@ -178,6 +200,15 @@ sip_client::~sip_client()
         delete m_connect;
         m_connect = NULL;
     }
+}
+bool sip_client::inject_values(int index)
+{
+    if(L)
+    {
+        lua_pushnumber(L, index);
+        lua_setglobal(L, "index");
+    }
+    return true;
 }
 bool sip_client::run_script(int argc)
 {
@@ -229,9 +260,27 @@ int sip_client::on_read()
             if (pos != std::string::npos)
             {
                 string msg = buf.substr(0, pos);
-                buf = buf.substr(pos + 4, buf.length());
-                if (!on_sip_msg(msg.c_str()))
-                    return 0;
+                auto content_pos = msg.find("Content-Length:");
+                if( content_pos != std::string::npos)
+                {
+                    int length = std::atoi( msg.substr(content_pos, msg.length()).c_str());
+                    if( length = 0 )
+                    {
+                        buf = buf.substr(pos + 4, buf.length());
+                        if (!on_sip_msg(msg.c_str())) return 0;
+                    }
+                    else if( buf.length()-pos-4 >= length )
+                    {
+                        msg = buf.substr(0, pos + 4 + length);
+                        buf = buf.substr(pos + 4 + length , buf.length());
+                        if (!on_sip_msg(msg.c_str())) return 0;
+                    }
+                    else
+                    {
+                        // need read more buffer
+                        return 1;
+                    }
+                }
             }
         }
     }

@@ -32,6 +32,7 @@ public:
     bool run_script(int argc = 0);
     bool operator<(const sip_client &c);
     int getfd();
+    bool inject_values(int index);
 public:
     connect_base *m_connect;
     string buf;

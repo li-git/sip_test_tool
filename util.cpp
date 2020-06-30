@@ -19,6 +19,7 @@ std::string MD5(const std::string& src )
 {
     MD5_CTX ctx;
     std::string md5_string;
+    std::string dst;
     unsigned char md[16] = { 0 };
     char tmp[33] = { 0 };
 
@@ -32,7 +33,8 @@ std::string MD5(const std::string& src )
         sprintf( tmp, "%02X", md[i] );
         md5_string += tmp;
     }   
-    return md5_string;
+    std::transform(md5_string.begin(), md5_string.end(), dst.begin(), ::tolower);
+    return dst;
 }
 void ms_sleep(unsigned ms)
 {

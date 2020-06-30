@@ -38,6 +38,7 @@ extern "C"
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <algorithm>
 
 uint64_t gettime();
 int log(lua_State *L);

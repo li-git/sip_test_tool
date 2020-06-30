@@ -1,7 +1,7 @@
 SOURCE  := $(wildcard *.c) $(wildcard *.cpp)
 OBJS    := $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE)))
 
-TARGET  := siptool
+TARGET  := tool
 
 CC      := gcc
 CXX     := g++ -std=c++11

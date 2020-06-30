@@ -56,16 +56,19 @@ int main(int argc, char **argv)
     printf("  server  %s:%d lua  %s  conns %d \n", server_addr.c_str(), port, script_path.c_str(), connections);
 
     init_envs();
+
     net_poll *net_poll_ = new net_poll();
     for(int i=0; i< connections; ++i)
     {
         sip_client *cli = new sip_client(pro, server_addr, port , script_path, net_poll_);
+        cli->inject_values(i);
         if(cli->run_script())
         {
             net_poll_->epoll_add(cli);
         }
-        usleep(100);
+        usleep(10);
     }
     net_poll_->loop();
+    if(net_poll_){ delete net_poll_; net_poll_ = NULL;}
     return 0;
 }
