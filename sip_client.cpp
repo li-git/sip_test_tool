@@ -237,10 +237,9 @@ bool sip_client::on_sip_msg(const char *sip_msg)
     lua_pushstring(L, sip_msg);
     return run_script(1);
 }
-static char tmp_buf[1024] = {0};
 int sip_client::on_read()
 {
-    memset(tmp_buf, 0, sizeof(tmp_buf));
+    char tmp_buf[1024] = {0};
     int ret = 0;
     if (m_connect)
     {

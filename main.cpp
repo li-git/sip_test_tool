@@ -65,8 +65,10 @@ int main(int argc, char **argv)
         if(cli->run_script())
         {
             net_poll_->epoll_add(cli);
+        }else{
+            delete cli;cli = NULL;
         }
-        usleep(10);
+        printf("========>clients index %d \n", i);
     }
     net_poll_->loop();
     if(net_poll_){ delete net_poll_; net_poll_ = NULL;}
