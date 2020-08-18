@@ -23,7 +23,7 @@ extern "C"
 #include <openssl/md5.h>
 #include <unistd.h>
 #include <stdint.h>
-
+#include <sys/prctl.h>
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"

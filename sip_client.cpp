@@ -54,8 +54,7 @@ int sleep_(lua_State *L)
     sip_client *cli = (sip_client *)lua_touserdata(L, -1);
     if (cli)
     {
-        cli->end_time = time(NULL) + sleep_delay;
-        notify_timer::instance()->addTask(cli);
+        timer::instance()->addTask(cli->getfd(), sleep_delay);
         //cout<<" add end time = " << cli->end_time <<endl;
         lua_yield(L, 0);
     }
@@ -86,7 +85,7 @@ bool net_poll::loop()
     event.data.fd = read_fd;
     epoll_ctl(epfd, EPOLL_CTL_ADD, read_fd, &event);
 
-    auto notify_thread = [&] { notify_timer::instance()->loop(wirte_fd); };
+    auto notify_thread = [&] { timer::instance()->loop(wirte_fd); };
     std::thread notify_th(notify_thread);
     notify_th.detach();
 

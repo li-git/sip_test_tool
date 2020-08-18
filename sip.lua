@@ -33,8 +33,9 @@ CSeq: 1 REGISTER
 Contact: <sip:]]..user..[[@10.100.125.18:9090;transport=TCP>
 Content-Length: 0
 Expires: 86400]].."\r\n\r\n"
-
+    log("===>"..reg)
     local resp = sip.sendmsg(reg)
+    log("--->"..resp)
     local uri = "sip:16692370001.zoomcloudpbx.com;transport=TCP"
     local nonce = tostring(string.match( resp, 'nonce="(.*)",'))
     local realm = tostring(string.match( resp, 'realm="(.*)", non'))
@@ -52,8 +53,9 @@ Authorization: Digest username="]]..user..[[",realm="]]..realm..[[",cnonce="6b8b
 Content-Length: 0
 Expires: 86400]].."\r\n\r\n"
 
+    log("===>"..reg)
     resp = sip.sendmsg(reg)
     log("===rereg response "..tostring(resp))
 
-    sip.sleep(5)
+    sip.sleep(10)
 end

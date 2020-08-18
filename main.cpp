@@ -2,6 +2,7 @@
 #include "connect_handle.h"
 #include "sip_client.h"
 #include "clients_manager.h"
+#include "timer.h"
 
 void init_envs()
 {

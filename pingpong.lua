@@ -1,6 +1,6 @@
 while true do
      local resp = sip.sendmsg("\r\n\r\n")
-     sip.log("  recieved ".. tostring(resp))
-     sip.sleep(1)
+     log("  recieved ".. tostring(resp))
+     sip.sleep(3)
      --sip.log("=============================>continue ")
 end

@@ -1,6 +1,7 @@
 #ifndef __SIP_CLIENT_H__
 #define __SIP_CLIENT_H__
 #include "connect_handle.h"
+#include "timer.h"
 
 int sendmsg(lua_State *L);
 class sip_client;
