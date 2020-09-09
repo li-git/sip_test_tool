@@ -1,6 +1,6 @@
 #include "util.h"
 #include "connect_handle.h"
-#include "sip_client.h"
+#include "client.h"
 #include "clients_manager.h"
 #include "timer.h"
 
@@ -14,7 +14,7 @@ void init_envs()
 }
 const char* help = "\n\
 Useage:\n\
-    xxx -serverip <ip> -port <port> -luafile <path> -connections <cons> -protocol <tcp/tls>\n\
+    xxx -serverip <ip> -port <port> -luafile <path> -connections <cons> -protocol <tcp/tls> -threads <thread num>\n\
 ";
 int main(int argc, char **argv)
 {
@@ -22,6 +22,7 @@ int main(int argc, char **argv)
     std::string script_path = "./sip.lua";
     int connections = 0;
     int port = 0;
+    int threads = 1;
     Protocol pro = T_TCP;
     if(argc < 5)
     {
@@ -53,25 +54,53 @@ int main(int argc, char **argv)
                 pro = T_TLS;
             }
         }
+        else if(std::string(argv[i])=="-threads" && i<argc-1)
+        {
+            threads = std::atoi(argv[i+1]);
+        }
     }
     printf("  server  %s:%d lua  %s  conns %d \n", server_addr.c_str(), port, script_path.c_str(), connections);
 
     init_envs();
 
-    net_poll *net_poll_ = new net_poll();
-    for(int i=0; i< connections; ++i)
-    {
-        sip_client *cli = new sip_client(pro, server_addr, port , script_path, net_poll_);
-        cli->inject_values(i);
-        if(cli->run_script())
+    //timer thread
+    auto notify_thread = [] { timer::instance()->loop(); };
+    std::thread notify_th(notify_thread);
+    notify_th.detach();
+
+    //task threads
+    auto task_thread = [&] {
+        prctl(PR_SET_NAME,"task");
+        int fds[2];
+        pipe(fds);
+        int read_fd = fds[0];
+        int wirte_fd = fds[1];
+        net_poll net_poll_;
+        for(int i=0; i< connections; ++i)
         {
-            net_poll_->epoll_add(cli);
-        }else{
-            delete cli;cli = NULL;
+            client *cli = new sip_client(pro, server_addr, port , script_path);
+            cli->inject_values(i);
+            cli->m_notifyfd = wirte_fd;
+            if(cli->run_script(WAKE_START))
+            {
+                net_poll_.epoll_add(cli);
+            }else{
+                delete cli;cli = NULL;
+            }
         }
-        printf("========>clients index %d \n", i);
+        net_poll_.loop(read_fd);
+    };
+
+    std::vector< std::shared_ptr<std::thread> > tasks;
+    for(int j = 0;j < threads;++j)
+    {
+        auto task = std::make_shared<std::thread>(std::thread(task_thread));
+        task->detach();
+        tasks.push_back(task);
     }
-    net_poll_->loop();
-    if(net_poll_){ delete net_poll_; net_poll_ = NULL;}
+    while(true)
+    {
+        sleep(3);
+    }
     return 0;
 }

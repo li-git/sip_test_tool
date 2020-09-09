@@ -9,15 +9,15 @@ timer::timer()
 {
     spinlock_init(&m_lock);
 }
-bool timer::addTask(int fd, int delay)
+bool timer::addTask(int fd, int notifyfd, int delay)
 {
     spinlock_lock(&m_lock);
-    Task task = Task(fd, delay);
+    Task task = Task(fd, notifyfd, delay);
     cli_multiset.insert(std::move(task));
     spinlock_unlock(&m_lock);
     return true;
 }
-void timer::loop(int notify_fd)
+void timer::loop()
 {
     prctl(PR_SET_NAME,"timer");
     while(true)
@@ -31,7 +31,7 @@ void timer::loop(int notify_fd)
                 if( task.m_time_stamp <= time(NULL) )
                 {
                     int buf = task.m_fd;
-                    write(notify_fd, (void *)&buf, sizeof(buf));
+                    write(task.m_notifyfd, (void *)&buf, sizeof(buf));
                     it = std::multiset< Task >::reverse_iterator( cli_multiset.erase((++it).base()) );
                 }
                 else

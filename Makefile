@@ -9,7 +9,7 @@ LIBS    := -pthread -ldl -lsrtp -lcurl -luuid -lssl -lcrypto -llua
 LIBS    += -lpcap -lmysqlclient -lmysqlservices
 LDFLAGS := -L. -L./lib -L./lib/libs -L/usr/lib64/mysql
 INCLUDE := -I./include
-DEFINES := -D__LINUX__
+DEFINES := #-D__LINUX__
 CFLAGS  := -g $(INCLUDE) $(DEFINES)
 CXXFLAGS:= $(CFLAGS)
 

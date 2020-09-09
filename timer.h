@@ -6,10 +6,11 @@
 class Task
 {
 public:
-    Task(int fd, int delay)
+    Task(int fd, int notifyfd, int delay)
     {
         m_fd = fd;
         m_time_stamp = time(NULL) + delay;
+        m_notifyfd = notifyfd;
     }
     ~Task(){}
     friend bool operator<(const Task &c, const Task &b)
@@ -18,6 +19,7 @@ public:
     }
 public:
     int m_fd;
+    int m_notifyfd;
     int m_time_stamp;
 };
 class timer
@@ -26,8 +28,8 @@ public:
     timer();
     ~timer(){}
     static timer *instance();
-    bool addTask(int fd, int delay);
-    void loop(int notify_fd);
+    bool addTask(int fd, int notifyfd, int delay);
+    void loop();
 public:
     std::multiset< Task > cli_multiset;
     spinlock m_lock;

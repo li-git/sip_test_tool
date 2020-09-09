@@ -11,13 +11,13 @@ clients_manager *clients_manager::instance()
 {
     return &cli_mg;
 }
-bool clients_manager::del_client(sip_client *cli)
+bool clients_manager::del_client(client *cli)
 {
     spinlock_lock(&m_lock);
     auto pos = cli_map.find(cli->getfd());
     if(pos != cli_map.end())
     {
-        delete (sip_client *)(pos->second);
+        delete (client *)(pos->second);
         cli_map.erase(pos);
     }
     spinlock_unlock(&m_lock);
@@ -26,18 +26,18 @@ bool clients_manager::del_client(sip_client *cli)
 bool clients_manager::del_client(int fd)
 {
     spinlock_lock(&m_lock);
-    sip_client *cli = NULL;
+    client *cli = NULL;
     auto pos = cli_map.find(fd);
     if(pos != cli_map.end())
     {
-        cli = (sip_client *)(pos->second);
-        delete (sip_client *)(pos->second);
+        cli = (client *)(pos->second);
+        delete (client *)(pos->second);
         cli_map.erase(pos);
     }
     spinlock_unlock(&m_lock);
     return true;
 }
-bool clients_manager::is_exsist(sip_client *cli)
+bool clients_manager::is_exsist(client *cli)
 {
     bool ret = true;
     spinlock_lock(&m_lock);
@@ -53,22 +53,98 @@ bool clients_manager::is_exsist(sip_client *cli)
     spinlock_unlock(&m_lock);
     return ret;
 }
-sip_client *clients_manager::getclient(int fd)
+client *clients_manager::getclient(int fd)
 {
     spinlock_lock(&m_lock);
-    sip_client *cli = NULL;
+    client *cli = NULL;
     auto pos = cli_map.find(fd);
     if( pos != cli_map.end() )
     {
-        cli  = (sip_client *)(pos->second);
+        cli  = (client *)(pos->second);
     }
     spinlock_unlock(&m_lock);
     return cli;
 }
-bool clients_manager::add_client(sip_client *cli)
+bool clients_manager::add_client(client *cli)
 {
     spinlock_lock(&m_lock);
     cli_map[cli->getfd()] = cli;
     spinlock_unlock(&m_lock);
+    return true;
+}
+
+
+// net_poll
+net_poll::net_poll()
+{
+    epfd = epoll_create(10240);
+}
+bool net_poll::loop(int read_fd)
+{
+    // add event fd watch
+    epoll_event event;
+    event.events = EPOLLIN | EPOLLERR;
+    event.data.fd = read_fd;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, read_fd, &event);
+
+    epoll_event revents[10240];
+    while (true)
+    {
+        int num = epoll_wait(epfd, revents, 10240, 3 * 1000);
+        for (int i = 0; i < num; i++)
+        {
+            if (revents[i].events & EPOLLIN)
+            {
+                if (revents[i].data.fd == read_fd)
+                {
+                    // notify event
+                    int fd = 0;
+                    int ret = read(read_fd, (void*)&fd, sizeof(fd));
+                    if (ret )
+                    {
+                        client *cli = clients_manager::instance()->getclient(fd);
+                        if(cli)
+                        {
+                            cli->run_script(WAKE_TIMER);
+                        }
+                    }
+                }
+                else
+                {
+                    int fd = revents[i].data.fd;
+                    client *cli = clients_manager::instance()->getclient(fd);
+                    if (cli)
+                    {
+                        if (cli->on_read() == 0)
+                        {
+                            epoll_del(cli, fd);
+                        }
+                    }
+                }
+            }
+            else if (revents[i].events & EPOLLERR)
+            {
+                cout << "read error notify \n";
+                int fd = revents[i].data.fd;
+                epoll_del(NULL, fd);
+            }
+        }
+    }
+    return 0;
+}
+bool net_poll::epoll_add(client *c)
+{
+    epoll_event event;
+    event.events = EPOLLIN | EPOLLERR;
+    event.data.fd = c->getfd();
+    epoll_ctl(epfd, EPOLL_CTL_ADD, c->getfd(), &event);
+
+    clients_manager::instance()->add_client(c);
+    return true;
+}
+bool net_poll::epoll_del(client *c, int fd)
+{
+    epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+    clients_manager::instance()->del_client(fd);
     return true;
 }
