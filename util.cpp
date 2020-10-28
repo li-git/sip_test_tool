@@ -1,4 +1,5 @@
 #include "util.h"
+#include <sstream>
 uint64_t gettime()
 {
     timeval tv;
@@ -12,7 +13,10 @@ int log(lua_State *L)
     char buf[128] = {0};
     tm *local = localtime(&now_time);
     strftime(buf, 128, "%Y-%m-%d %H:%M:%S", local);
-    std::cout << buf << " ====> " << log  << std::endl;
+
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    std::cout << buf << oss.str() << " ====> " << log  << std::endl;
     return 0;
 }
 std::string MD5(const std::string& src )
