@@ -1,6 +1,9 @@
-while true do
-     local resp = tt.sendmsg("\r\n\r\n")
-     log("  recieved ".. tostring(resp))
-     tt.sleep(3)
-     --tt.log("=============================>continue ")
+require "util"
+function run()
+     while true do
+          local resp = sendmsg("\r\n\r\n")
+          log("  recieved ".. tostring(resp))
+          sleep(3)
+     end
 end
+start_worker(run)
