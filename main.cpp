@@ -14,7 +14,7 @@ void init_envs()
 }
 const char* help = "\n\
 Useage:\n\
-    xxx -serverip <ip> -port <port> -luafile <path> -connections <cons> -protocol <tcp/tls> -threads <thread num>\n\
+    xxx -s <ip> -p <port> -lua <path> -c <cons> -pr <tcp/tls> -t <thread num>\n\
 ";
 int main(int argc, char **argv)
 {
@@ -31,30 +31,30 @@ int main(int argc, char **argv)
     }
     for(int i =0; i< argc ; ++i)
     {
-        if(std::string(argv[i])=="-serverip" && i<argc-1)
+        if(std::string(argv[i])=="-s" && i<argc-1)
         {
             server_addr = argv[i+1];
         }
-        else if(std::string(argv[i])=="-port" && i<argc-1)
+        else if(std::string(argv[i])=="-p" && i<argc-1)
         {
             port = std::atoi(argv[i+1]);
         }
-        else if(std::string(argv[i])=="-luafile" && i<argc-1)
+        else if(std::string(argv[i])=="-luae" && i<argc-1)
         {
             script_path = argv[i+1];
         }
-        else if(std::string(argv[i])=="-connections" && i<argc-1)
+        else if(std::string(argv[i])=="-c" && i<argc-1)
         {
             connections = std::atoi(argv[i+1]);
         }
-        else if(std::string(argv[i])=="-protocol" && i<argc-1)
+        else if(std::string(argv[i])=="-pr" && i<argc-1)
         {
             if(std::string(argv[i+1])=="tls")
             {
                 pro = T_TLS;
             }
         }
-        else if(std::string(argv[i])=="-threads" && i<argc-1)
+        else if(std::string(argv[i])=="-t" && i<argc-1)
         {
             threads = std::atoi(argv[i+1]);
         }
@@ -78,14 +78,12 @@ int main(int argc, char **argv)
         net_poll net_poll_;
         for(int i=0; i< connections; ++i)
         {
-            client *cli = new sip_client(pro, server_addr, port , script_path);
+            shared_ptr<client> cli = shared_ptr<client>(new sip_client(pro, server_addr, port , script_path));
             cli->inject_values(i);
             cli->m_notifyfd = wirte_fd;
             if(cli->run_script(WAKE_START))
             {
-                net_poll_.epoll_add(cli);
-            }else{
-                delete cli;cli = NULL;
+                clients_manager::instance()->add_client(cli, &net_poll_);
             }
         }
         net_poll_.loop(read_fd);

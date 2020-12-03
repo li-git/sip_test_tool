@@ -42,10 +42,28 @@ int sleep_(lua_State *L)
     client *cli = (client *)lua_touserdata(L, -1);
     if (cli)
     {
+        cli->isSleeping = true;
         timer::instance()->addTask(cli->getfd(), cli->m_notifyfd, sleep_delay);
         //cout<<" add end time = " << cli->end_time <<endl;
         //lua_yield(L, 0);
     }
+    return 0;
+}
+int local_logs(lua_State *L)
+{
+    const char *log = lua_tostring(L, -1);
+    time_t now_time = time(NULL);
+    char buf[128] = {0};
+    tm *local = localtime(&now_time);
+    strftime(buf, 128, "%Y-%m-%d %H:%M:%S", local);
+
+    lua_getfield(L, LUA_REGISTRYINDEX, "ExtensionInfo");
+    client *cli = (client *)lua_touserdata(L, -1);
+
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    std::cout << cli << "|" << buf << oss.str() << " ====> " << log  << std::endl;
+
     return 0;
 }
 int md5_(lua_State *L)
@@ -72,7 +90,7 @@ int lua_init(client *cli)
     lua_setfield(cli->L, LUA_REGISTRYINDEX, "ExtensionInfo");
     luaL_requiref(cli->L, "tt", luaopen_lib, 1);
 
-    lua_register(cli->L, "log", log);
+    lua_register(cli->L, "log", local_logs);
     lua_register(cli->L, "mysql", mysql);
 }
 
@@ -81,7 +99,8 @@ client::client(Protocol type, std::string &ipaddr, int port, std::string &path)
       L(NULL),
       end_time(0),
       m_notifyfd(0),
-      user_data(NULL)
+      user_data(NULL),
+      isSleeping(false)
 {
     if (type == T_TCP)
     {
@@ -166,6 +185,7 @@ bool client::run_script(WakeType argc)
         lua_getglobal(L, "luarunFun");
         lua_pushstring(L, "WAKE_TIMER");
         lua_pushnil(L);
+        isSleeping = false;
     }
     else if( argc == WAKE_START )
     {
@@ -173,13 +193,18 @@ bool client::run_script(WakeType argc)
         lua_pushstring(L, "WAKE_START");
         lua_pushnil(L);
     }
-    else if(argc == WAKE_DATA)
+    else if(argc == WAKE_DATA && !isSleeping)
     {
         string argStr = lua_tostring(L, -1)?lua_tostring(L, -1):"";
         lua_pop(L,1);
         lua_getglobal(L, "luarunFun");
         lua_pushstring(L, "WAKE_DATA");
         lua_pushstring(L, argStr.c_str());
+    }
+    else
+    {
+        cout << "run_script type error argc" << argc << endl;
+        return false;
     }
     if(docall(L, 2, 0, 0, 1)!= 0)
     {

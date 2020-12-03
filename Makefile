@@ -23,4 +23,4 @@ clean :
 	rm -rf *.log
 
 $(TARGET) : $(OBJS)
-	$(CXX) -o $@ $(OBJS) $(DEFINES) $(LDFLAGS) $(LIBS)
+	$(CXX) -g -o  $@ $(OBJS) $(DEFINES) $(LDFLAGS) $(LIBS)

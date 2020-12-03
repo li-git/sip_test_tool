@@ -2,6 +2,7 @@
 #define __SIP_CLIENT_H__
 #include "connect_handle.h"
 #include "timer.h"
+#include <sstream>
 
 enum WakeType
 {
@@ -33,6 +34,7 @@ public:
     int64_t end_time;
     void *user_data;
     int m_notifyfd;
+    bool isSleeping;
 };
 
 class sip_client: public client

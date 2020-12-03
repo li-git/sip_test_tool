@@ -11,13 +11,12 @@ clients_manager *clients_manager::instance()
 {
     return &cli_mg;
 }
-bool clients_manager::del_client(client *cli)
+bool clients_manager::del_client(shared_ptr<client> cli)
 {
     spinlock_lock(&m_lock);
     auto pos = cli_map.find(cli->getfd());
     if(pos != cli_map.end())
     {
-        delete (client *)(pos->second);
         cli_map.erase(pos);
     }
     spinlock_unlock(&m_lock);
@@ -26,12 +25,9 @@ bool clients_manager::del_client(client *cli)
 bool clients_manager::del_client(int fd)
 {
     spinlock_lock(&m_lock);
-    client *cli = NULL;
     auto pos = cli_map.find(fd);
     if(pos != cli_map.end())
     {
-        cli = (client *)(pos->second);
-        delete (client *)(pos->second);
         cli_map.erase(pos);
     }
     spinlock_unlock(&m_lock);
@@ -53,22 +49,19 @@ bool clients_manager::is_exsist(client *cli)
     spinlock_unlock(&m_lock);
     return ret;
 }
-client *clients_manager::getclient(int fd)
+shared_ptr<client> clients_manager::getclient(int fd)
 {
+    shared_ptr<client> cli;
     spinlock_lock(&m_lock);
-    client *cli = NULL;
-    auto pos = cli_map.find(fd);
-    if( pos != cli_map.end() )
-    {
-        cli  = (client *)(pos->second);
-    }
+    cli = cli_map[fd];
     spinlock_unlock(&m_lock);
     return cli;
 }
-bool clients_manager::add_client(client *cli)
+bool clients_manager::add_client(shared_ptr<client> cli, net_poll *p)
 {
     spinlock_lock(&m_lock);
     cli_map[cli->getfd()] = cli;
+    p->epoll_add(cli->getfd());
     spinlock_unlock(&m_lock);
     return true;
 }
@@ -102,7 +95,7 @@ bool net_poll::loop(int read_fd)
                     int ret = read(read_fd, (void*)&fd, sizeof(fd));
                     if (ret )
                     {
-                        client *cli = clients_manager::instance()->getclient(fd);
+                        shared_ptr<client> cli = clients_manager::instance()->getclient(fd);
                         if(cli)
                         {
                             cli->run_script(WAKE_TIMER);
@@ -112,12 +105,13 @@ bool net_poll::loop(int read_fd)
                 else
                 {
                     int fd = revents[i].data.fd;
-                    client *cli = clients_manager::instance()->getclient(fd);
+                    shared_ptr<client> cli = clients_manager::instance()->getclient(fd);
                     if (cli)
                     {
                         if (cli->on_read() == 0)
                         {
-                            epoll_del(cli, fd);
+                            epoll_del(fd);
+                            clients_manager::instance()->del_client(fd);
                         }
                     }
                 }
@@ -126,25 +120,23 @@ bool net_poll::loop(int read_fd)
             {
                 cout << "read error notify \n";
                 int fd = revents[i].data.fd;
-                epoll_del(NULL, fd);
+                epoll_del(fd);
+                clients_manager::instance()->del_client(fd);
             }
         }
     }
     return 0;
 }
-bool net_poll::epoll_add(client *c)
+bool net_poll::epoll_add(int fd)
 {
     epoll_event event;
     event.events = EPOLLIN | EPOLLERR;
-    event.data.fd = c->getfd();
-    epoll_ctl(epfd, EPOLL_CTL_ADD, c->getfd(), &event);
-
-    clients_manager::instance()->add_client(c);
+    event.data.fd = fd;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event);
     return true;
 }
-bool net_poll::epoll_del(client *c, int fd)
+bool net_poll::epoll_del(int fd)
 {
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-    clients_manager::instance()->del_client(fd);
     return true;
 }
